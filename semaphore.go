@@ -38,11 +38,11 @@ func (s *semaphore) Acquire(ctx context.Context) error {
 		}
 
 		state := atomic.LoadUint64(&s.state)
-		value := state & 0xFFFFFFFF
+		count := state & 0xFFFFFFFF
 		limit := state >> 32
-		newValue := value + 1
-		if newValue <= limit {
-			if atomic.CompareAndSwapUint64(&s.state, state, limit<<32+newValue) {
+		newCount := count + 1
+		if newCount <= limit {
+			if atomic.CompareAndSwapUint64(&s.state, state, limit<<32+newCount) {
 				return nil
 			} else {
 				continue
@@ -59,14 +59,14 @@ func (s *semaphore) Acquire(ctx context.Context) error {
 func (s *semaphore) Release() {
 	for {
 		state := atomic.LoadUint64(&s.state)
-		value := state & 0xFFFFFFFF
-		if value == 0 {
+		count := state & 0xFFFFFFFF
+		if count == 0 {
 			panic("Release without acquire")
 		}
-		newValue := value - 1
-		if atomic.CompareAndSwapUint64(&s.state, state, state&0xFFFFFFFF00000000+newValue) {
+		newCount := count - 1
+		if atomic.CompareAndSwapUint64(&s.state, state, state&0xFFFFFFFF00000000+newCount) {
 			s.lock.Lock()
-			s.cond.Signal()
+			s.cond.Broadcast()
 			s.lock.Unlock()
 			return
 		}

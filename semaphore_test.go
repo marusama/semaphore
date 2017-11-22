@@ -1,34 +1,34 @@
 package semaphore
 
 import (
-	"context"
-	"runtime"
-	"sync"
 	"testing"
-	"time"
 	"fmt"
 )
 
-func TestSemaphore_Acquire(t *testing.T) {
-
-	println(runtime.GOMAXPROCS(0))
-
-	s := New(1)
-
-	wg := &sync.WaitGroup{}
-	for i := 0; i < 100; i++ {
-		wg.Add(1)
-		go func() {
-			s.Acquire(context.Background())
-			time.Sleep(10 * time.Minute)
-			wg.Done()
-		}()
-	}
-
-	wg.Wait()
-
-	println("Done")
-}
+//func TestSemaphore_Acquire(t *testing.T) {
+//
+//	println(runtime.GOMAXPROCS(0))
+//
+//	s := New(1)
+//
+//	wg := &sync.WaitGroup{}
+//	for i := 0; i < 100; i++ {
+//		wg.Add(1)
+//		go func() {
+//			s.Acquire(context.Background())
+//			time.Sleep(10 * time.Minute)
+//			wg.Done()
+//		}()
+//	}
+//
+//	wg.Wait()
+//
+//	println("Done")
+//}
+//
+//func TestSemaphore_Acquire2(t *testing.T) {
+//
+//}
 
 func BenchmarkSemaphore_Acquire(b *testing.B) {
 	sem := New(b.N)
