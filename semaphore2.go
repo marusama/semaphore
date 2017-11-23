@@ -16,16 +16,16 @@ type Semaphore2 interface {
 }
 
 type semaphore2 struct {
-	state uint64
-	lock  sync.RWMutex
-	br    *chan struct{}
+	state       uint64
+	lock        sync.RWMutex
+	broadcastCh *chan struct{}
 }
 
 func New2(limit int) Semaphore2 {
-	br := make(chan struct{})
+	broadcastCh := make(chan struct{})
 	return &semaphore2{
-		state: uint64(limit) << 32,
-		br:    &br,
+		state:       uint64(limit) << 32,
+		broadcastCh: &broadcastCh,
 	}
 }
 
@@ -49,16 +49,16 @@ func (s *semaphore2) Acquire(ctx context.Context) error {
 			}
 		} else {
 			s.lock.RLock()
-			br := *s.br
+			broadcastCh := *s.broadcastCh
 			s.lock.RUnlock()
 			select {
 			case <-ctx.Done():
 				return errors.New("ctx.Done()")
-			case <-br:
+			// wait for broadcast
+			case <-broadcastCh:
 			}
 		}
 	}
-	panic("unreachable")
 }
 
 func (s *semaphore2) Release() {
@@ -72,29 +72,32 @@ func (s *semaphore2) Release() {
 		newCount := count - 1
 		if atomic.CompareAndSwapUint64(&s.state, state, state&0xFFFFFFFF00000000+newCount) {
 			if count >= limit {
+				newBroadcastCh := make(chan struct{})
 				s.lock.Lock()
-				oldBr := s.br
-				newBr := make(chan struct{})
-				s.br = &newBr
-				close(*oldBr)
+				oldBroadcastCh := s.broadcastCh
+				s.broadcastCh = &newBroadcastCh
 				s.lock.Unlock()
+
+				// send broadcast signal
+				close(*oldBroadcastCh)
 			}
 			return
 		}
 	}
-	panic("unreachable")
 }
 
 func (s *semaphore2) SetLimit(limit int) {
 	for {
 		state := atomic.LoadUint64(&s.state)
 		if atomic.CompareAndSwapUint64(&s.state, state, uint64(limit)<<32+state&0xFFFFFFFF) {
+			newBroadcastCh := make(chan struct{})
 			s.lock.Lock()
-			oldBr := s.br
-			newBr := make(chan struct{})
-			s.br = &newBr
-			close(*oldBr)
+			oldBroadcastCh := s.broadcastCh
+			s.broadcastCh = &newBroadcastCh
 			s.lock.Unlock()
+
+			// send broadcast signal
+			close(*oldBroadcastCh)
 			return
 		}
 	}

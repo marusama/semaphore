@@ -43,7 +43,6 @@ func (s *semaphore) Acquire() {
 			s.lock.Unlock()
 		}
 	}
-	panic("unreachable")
 }
 
 func (s *semaphore) Release() {
@@ -64,17 +63,18 @@ func (s *semaphore) Release() {
 			return
 		}
 	}
-	panic("unreachable")
 }
 
 func (s *semaphore) SetLimit(limit int) {
 	for {
 		state := atomic.LoadUint64(&s.state)
 		if atomic.CompareAndSwapUint64(&s.state, state, uint64(limit)<<32+state&0xFFFFFFFF) {
+			s.lock.Lock()
+			s.cond.Broadcast()
+			s.lock.Unlock()
 			return
 		}
 	}
-	panic("unreachable")
 }
 
 func (s *semaphore) GetCount() int {
