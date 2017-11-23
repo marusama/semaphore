@@ -3,8 +3,8 @@ package semaphore
 import (
 	"context"
 	"errors"
-	"sync/atomic"
 	"sync"
+	"sync/atomic"
 )
 
 type Semaphore2 interface {
@@ -25,16 +25,16 @@ func New2(limit int) Semaphore2 {
 	br := make(chan struct{})
 	return &semaphore2{
 		state: uint64(limit) << 32,
-		br: &br,
+		br:    &br,
 	}
 }
 
 func (s *semaphore2) Acquire(ctx context.Context) error {
 	for {
 		select {
-			case <-ctx.Done():
-				return errors.New("ctx.Done()")
-			default:
+		case <-ctx.Done():
+			return errors.New("ctx.Done()")
+		default:
 		}
 
 		state := atomic.LoadUint64(&s.state)

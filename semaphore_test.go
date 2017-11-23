@@ -1,8 +1,8 @@
 package semaphore
 
 import (
-	"testing"
 	"fmt"
+	"testing"
 )
 
 //func TestSemaphore_Acquire(t *testing.T) {

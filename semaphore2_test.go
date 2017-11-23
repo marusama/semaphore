@@ -1,8 +1,8 @@
 package semaphore
 
 import (
-	"testing"
 	"fmt"
+	"testing"
 )
 
 func BenchmarkSemaphore2_Acquire(b *testing.B) {
