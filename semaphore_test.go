@@ -34,7 +34,7 @@ func BenchmarkSemaphore_Acquire(b *testing.B) {
 	sem := New(b.N)
 
 	for i := 0; i < b.N; i++ {
-		_ = sem.Acquire(nil)
+		sem.Acquire()
 	}
 
 	if sem.GetCount() != sem.GetLimit() {
@@ -46,7 +46,7 @@ func BenchmarkSemaphore_Acquire_Release(b *testing.B) {
 	sem := New(b.N)
 
 	for i := 0; i < b.N; i++ {
-		_ = sem.Acquire(nil)
+		sem.Acquire()
 		sem.Release()
 	}
 
