@@ -5,6 +5,7 @@ import (
 	"testing"
 	"context"
 	"sync"
+	"time"
 )
 
 func TestSemaphore_Acquire_Release_over_limit(t *testing.T) {
@@ -18,6 +19,32 @@ func TestSemaphore_Acquire_Release_over_limit(t *testing.T) {
 			<- c
 			for j := 0; j < 100000; j++ {
 				sem.Acquire(nil)
+				sem.Release()
+			}
+			wg.Done()
+		}()
+	}
+
+	close(c)	// start
+	wg.Wait()
+
+	if sem.GetCount() != 0 {
+		t.Error("semaphore must have count = 0")
+	}
+}
+
+func TestSemaphore_Acquire_Release_over_limit_ctx_done(t *testing.T) {
+	sem := New(10)
+	ctx, _ := context.WithTimeout(context.Background(), 5 * time.Second)
+
+	c := make(chan struct{})
+	wg := sync.WaitGroup{}
+	for i := 0; i < 100; i++ {
+		wg.Add(1)
+		go func() {
+			<- c
+			for {
+				sem.Acquire(ctx)
 				sem.Release()
 			}
 			wg.Done()
