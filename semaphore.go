@@ -17,6 +17,7 @@ type Semaphore interface {
 
 type semaphore struct {
 	state       uint64
+	waitCount   int32
 	broadcastCh unsafe.Pointer
 }
 
@@ -30,14 +31,6 @@ func New(limit int) Semaphore {
 
 func (s *semaphore) Acquire(ctx context.Context) error {
 	for {
-		if ctx != nil {
-			select {
-			case <-ctx.Done():
-				return errors.New("ctx.Done()")
-			default:
-			}
-		}
-
 		state := atomic.LoadUint64(&s.state)
 		count := state & 0xFFFFFFFF
 		limit := state >> 32
@@ -49,11 +42,12 @@ func (s *semaphore) Acquire(ctx context.Context) error {
 				continue
 			}
 		} else {
+			atomic.AddInt32(&s.waitCount, 1)
 			broadcastCh := *(*chan struct{})(atomic.LoadPointer(&s.broadcastCh))
-
 			if ctx != nil {
 				select {
 				case <-ctx.Done():
+					atomic.AddInt32(&s.waitCount, -1)
 					return errors.New("ctx.Done()")
 				// wait for broadcast
 				case <-broadcastCh:
@@ -72,18 +66,21 @@ func (s *semaphore) Release() {
 	for {
 		state := atomic.LoadUint64(&s.state)
 		count := state & 0xFFFFFFFF
-		limit := state >> 32
 		if count == 0 {
 			panic("Release without acquire")
 		}
 		newCount := count - 1
 		if atomic.CompareAndSwapUint64(&s.state, state, state&0xFFFFFFFF00000000+newCount) {
-			if count >= limit {
-				newBroadcastCh := make(chan struct{})
-				oldPtr := atomic.LoadPointer(&s.broadcastCh)
-				if atomic.CompareAndSwapPointer(&s.broadcastCh, oldPtr, unsafe.Pointer(&newBroadcastCh)) {
-					oldBroadcastCh := *(*chan struct{})(oldPtr)
-					close(oldBroadcastCh)
+
+			for {
+				waitCount := atomic.LoadInt32(&s.waitCount)
+				if waitCount > 0 {
+					if atomic.CompareAndSwapInt32(&s.waitCount, waitCount, waitCount - 1) {
+						broadcastCh := *(*chan struct{})(atomic.LoadPointer(&s.broadcastCh))
+						broadcastCh <- struct{}{}
+					}
+				} else {
+					return
 				}
 			}
 			return

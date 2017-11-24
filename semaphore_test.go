@@ -7,6 +7,31 @@ import (
 	"sync"
 )
 
+func TestSemaphore_Acquire_Release_over_limit(t *testing.T) {
+	sem := New(10)
+
+	c := make(chan struct{})
+	wg := sync.WaitGroup{}
+	for i := 0; i < 100; i++ {
+		wg.Add(1)
+		go func() {
+			<- c
+			for j := 0; j < 100000; j++ {
+				sem.Acquire(nil)
+				sem.Release()
+			}
+			wg.Done()
+		}()
+	}
+
+	close(c)	// start
+	wg.Wait()
+
+	if sem.GetCount() != 0 {
+		t.Error("semaphore must have count = 0")
+	}
+}
+
 func BenchmarkSemaphore_Acquire(b *testing.B) {
 	sem := New(b.N)
 	ctx := context.Background()
@@ -35,7 +60,7 @@ func BenchmarkSemaphore_Acquire_Release_under_limit_simple(b *testing.B) {
 }
 
 func BenchmarkSemaphore_Acquire_Release_under_limit(b *testing.B) {
-	sem := New(100)
+	sem := New(20)
 
 	c := make(chan struct{})
 	wg := sync.WaitGroup{}
