@@ -3,8 +3,8 @@ package semaphore
 import (
 	"context"
 	"errors"
-	"sync"
 	"sync/atomic"
+	"unsafe"
 )
 
 type Semaphore interface {
@@ -17,15 +17,14 @@ type Semaphore interface {
 
 type semaphore struct {
 	state       uint64
-	lock        sync.RWMutex
-	broadcastCh *chan struct{}
+	broadcastCh unsafe.Pointer
 }
 
 func New(limit int) Semaphore {
 	broadcastCh := make(chan struct{})
 	return &semaphore{
 		state:       uint64(limit) << 32,
-		broadcastCh: &broadcastCh,
+		broadcastCh: unsafe.Pointer(&broadcastCh),
 	}
 }
 
@@ -50,9 +49,7 @@ func (s *semaphore) Acquire(ctx context.Context) error {
 				continue
 			}
 		} else {
-			s.lock.RLock()
-			broadcastCh := *s.broadcastCh
-			s.lock.RUnlock()
+			broadcastCh := *(*chan struct{})(atomic.LoadPointer(&s.broadcastCh))
 
 			if ctx != nil {
 				select {
@@ -83,13 +80,11 @@ func (s *semaphore) Release() {
 		if atomic.CompareAndSwapUint64(&s.state, state, state&0xFFFFFFFF00000000+newCount) {
 			if count >= limit {
 				newBroadcastCh := make(chan struct{})
-				s.lock.Lock()
-				oldBroadcastCh := s.broadcastCh
-				s.broadcastCh = &newBroadcastCh
-				s.lock.Unlock()
-
-				// send broadcast signal
-				close(*oldBroadcastCh)
+				oldPtr := atomic.LoadPointer(&s.broadcastCh)
+				if atomic.CompareAndSwapPointer(&s.broadcastCh, oldPtr, unsafe.Pointer(&newBroadcastCh)) {
+					oldBroadcastCh := *(*chan struct{})(oldPtr)
+					close(oldBroadcastCh)
+				}
 			}
 			return
 		}
@@ -101,13 +96,11 @@ func (s *semaphore) SetLimit(limit int) {
 		state := atomic.LoadUint64(&s.state)
 		if atomic.CompareAndSwapUint64(&s.state, state, uint64(limit)<<32+state&0xFFFFFFFF) {
 			newBroadcastCh := make(chan struct{})
-			s.lock.Lock()
-			oldBroadcastCh := s.broadcastCh
-			s.broadcastCh = &newBroadcastCh
-			s.lock.Unlock()
-
-			// send broadcast signal
-			close(*oldBroadcastCh)
+			oldPtr := atomic.LoadPointer(&s.broadcastCh)
+			if atomic.CompareAndSwapPointer(&s.broadcastCh, oldPtr, unsafe.Pointer(&newBroadcastCh)) {
+				oldBroadcastCh := *(*chan struct{})(oldPtr)
+				close(oldBroadcastCh)
+			}
 			return
 		}
 	}
