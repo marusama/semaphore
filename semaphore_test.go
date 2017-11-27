@@ -44,7 +44,10 @@ func TestSemaphore_Acquire_Release_over_limit_ctx_done(t *testing.T) {
 		go func() {
 			<- c
 			for {
-				sem.Acquire(ctx)
+				err := sem.Acquire(ctx)
+				if err != nil {
+					break
+				}
 				sem.Release()
 			}
 			wg.Done()

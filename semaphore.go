@@ -17,7 +17,7 @@ type Semaphore interface {
 
 type semaphore struct {
 	state       uint64
-	waitCount   int32
+	waitCount   int64
 	broadcastCh unsafe.Pointer
 }
 
@@ -42,12 +42,12 @@ func (s *semaphore) Acquire(ctx context.Context) error {
 				continue
 			}
 		} else {
-			atomic.AddInt32(&s.waitCount, 1)
+			atomic.AddInt64(&s.waitCount, 1)
 			broadcastCh := *(*chan struct{})(atomic.LoadPointer(&s.broadcastCh))
 			if ctx != nil {
 				select {
 				case <-ctx.Done():
-					atomic.AddInt32(&s.waitCount, -1)
+					atomic.AddInt64(&s.waitCount, -1)
 					return errors.New("ctx.Done()")
 				// wait for broadcast
 				case <-broadcastCh:
@@ -73,9 +73,9 @@ func (s *semaphore) Release() {
 		if atomic.CompareAndSwapUint64(&s.state, state, state&0xFFFFFFFF00000000+newCount) {
 
 			for {
-				waitCount := atomic.LoadInt32(&s.waitCount)
+				waitCount := atomic.LoadInt64(&s.waitCount)
 				if waitCount > 0 {
-					if atomic.CompareAndSwapInt32(&s.waitCount, waitCount, waitCount - 1) {
+					if atomic.CompareAndSwapInt64(&s.waitCount, waitCount, waitCount - 1) {
 						broadcastCh := *(*chan struct{})(atomic.LoadPointer(&s.broadcastCh))
 						broadcastCh <- struct{}{}
 					}
