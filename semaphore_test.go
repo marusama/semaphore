@@ -159,7 +159,7 @@ func TestSemaphore_Acquire_Release_under_limit(t *testing.T) {
 
 func TestSemaphore_Acquire_Release_under_limit_ctx_done(t *testing.T) {
 	sem := New(10)
-	ctx, _ := context.WithTimeout(context.Background(), 1*time.Second)
+	ctx, _ := context.WithTimeout(context.Background(), time.Second)
 
 	c := make(chan struct{})
 	wg := sync.WaitGroup{}
@@ -215,7 +215,7 @@ func TestSemaphore_Acquire_Release_over_limit(t *testing.T) {
 
 func TestSemaphore_Acquire_Release_over_limit_ctx_done(t *testing.T) {
 	sem := New(1)
-	ctx, _ := context.WithTimeout(context.Background(), 1*time.Second)
+	ctx, _ := context.WithTimeout(context.Background(), time.Second)
 
 	c := make(chan struct{})
 	wg := sync.WaitGroup{}
@@ -371,7 +371,7 @@ func TestSemaphore_SetLimit_increase_broadcast(t *testing.T) {
 	checkLimitAndCount(t, sem, 2, 0)
 }
 
-func TestSemaphore_Acquire_Release_change_limit_under_limit(t *testing.T) {
+func TestSemaphore_Acquire_Release_SetLimit_under_limit(t *testing.T) {
 	sem := New(100)
 
 	c := make(chan struct{})
@@ -422,7 +422,57 @@ func TestSemaphore_Acquire_Release_change_limit_under_limit(t *testing.T) {
 	checkLimitAndCount(t, sem, 100, 0)
 }
 
-func TestSemaphore_Acquire_Release_change_limit_over_limit(t *testing.T) {
+func TestSemaphore_Acquire_Release_SetLimit_under_limit_ctx_done(t *testing.T) {
+	sem := New(100)
+	ctx, _ := context.WithTimeout(context.Background(), time.Second)
+
+	c := make(chan struct{})
+	wg := sync.WaitGroup{}
+	for i := 0; i < 10; i++ {
+		wg.Add(1)
+		go func() {
+			<-c
+			for {
+				err := sem.Acquire(ctx)
+				if err != nil {
+					if err == ErrCtxDone {
+						break
+					}
+					panic(err)
+				}
+				runtime.Gosched()
+				sem.Release()
+				runtime.Gosched()
+			}
+			wg.Done()
+		}()
+	}
+
+	wg.Add(1)
+	go func() {
+		<-c
+		for {
+			select {
+			case <-ctx.Done():
+				sem.SetLimit(100)
+				wg.Done()
+				return
+			default:
+			}
+			newLimit := rand.Intn(50) + 50 // range [50, 99]
+			sem.SetLimit(newLimit)
+			runtime.Gosched()
+		}
+
+	}()
+
+	close(c) // start
+	wg.Wait()
+
+	checkLimitAndCount(t, sem, 100, 0)
+}
+
+func TestSemaphore_Acquire_Release_SetLimit_over_limit(t *testing.T) {
 	sem := New(1)
 
 	c := make(chan struct{})
@@ -473,59 +523,9 @@ func TestSemaphore_Acquire_Release_change_limit_over_limit(t *testing.T) {
 	checkLimitAndCount(t, sem, 1, 0)
 }
 
-func TestSemaphore_Acquire_Release_change_limit_under_limit_ctx_done(t *testing.T) {
-	sem := New(100)
-	ctx, _ := context.WithTimeout(context.Background(), 2*time.Second)
-
-	c := make(chan struct{})
-	wg := sync.WaitGroup{}
-	for i := 0; i < 10; i++ {
-		wg.Add(1)
-		go func() {
-			<-c
-			for {
-				err := sem.Acquire(ctx)
-				if err != nil {
-					if err == ErrCtxDone {
-						break
-					}
-					panic(err)
-				}
-				runtime.Gosched()
-				sem.Release()
-				runtime.Gosched()
-			}
-			wg.Done()
-		}()
-	}
-
-	wg.Add(1)
-	go func() {
-		<-c
-		for {
-			select {
-			case <-ctx.Done():
-				sem.SetLimit(100)
-				wg.Done()
-				return
-			default:
-			}
-			newLimit := rand.Intn(50) + 50 // range [50, 99]
-			sem.SetLimit(newLimit)
-			runtime.Gosched()
-		}
-
-	}()
-
-	close(c) // start
-	wg.Wait()
-
-	checkLimitAndCount(t, sem, 100, 0)
-}
-
-func TestSemaphore_Acquire_Release_change_limit_over_limit_ctx_done(t *testing.T) {
+func TestSemaphore_Acquire_Release_SetLimit_over_limit_ctx_done(t *testing.T) {
 	sem := New(1)
-	ctx, _ := context.WithTimeout(context.Background(), 2*time.Second)
+	ctx, _ := context.WithTimeout(context.Background(), time.Second)
 
 	c := make(chan struct{})
 	wg := sync.WaitGroup{}
@@ -573,7 +573,7 @@ func TestSemaphore_Acquire_Release_change_limit_over_limit_ctx_done(t *testing.T
 	checkLimitAndCount(t, sem, 1, 0)
 }
 
-func TestSemaphore_Acquire_Release_change_limit_random_limit(t *testing.T) {
+func TestSemaphore_Acquire_Release_SetLimit_random_limit(t *testing.T) {
 	sem := New(1)
 
 	c := make(chan struct{})
@@ -624,9 +624,9 @@ func TestSemaphore_Acquire_Release_change_limit_random_limit(t *testing.T) {
 	checkLimitAndCount(t, sem, 1, 0)
 }
 
-func TestSemaphore_Acquire_Release_change_limit_random_limit_ctx_done(t *testing.T) {
+func TestSemaphore_Acquire_Release_SetLimit_random_limit_ctx_done(t *testing.T) {
 	sem := New(1)
-	ctx, _ := context.WithTimeout(context.Background(), 2*time.Second)
+	ctx, _ := context.WithTimeout(context.Background(), time.Second)
 
 	c := make(chan struct{})
 	wg := sync.WaitGroup{}
