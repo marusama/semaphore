@@ -15,6 +15,10 @@ type Semaphore interface {
 	GetCount() int
 }
 
+var (
+	ErrCtxDone = errors.New("ctx.Done()")
+)
+
 type semaphore struct {
 	state       uint64
 	waitCount   int64
@@ -22,6 +26,9 @@ type semaphore struct {
 }
 
 func New(limit int) Semaphore {
+	if limit <= 0 {
+		panic("semaphore limit must be greater than 0")
+	}
 	broadcastCh := make(chan struct{})
 	return &semaphore{
 		state:       uint64(limit) << 32,
@@ -31,6 +38,14 @@ func New(limit int) Semaphore {
 
 func (s *semaphore) Acquire(ctx context.Context) error {
 	for {
+		if ctx != nil {
+			select {
+			case <-ctx.Done():
+				return ErrCtxDone
+			default:
+			}
+		}
+
 		state := atomic.LoadUint64(&s.state)
 		count := state & 0xFFFFFFFF
 		limit := state >> 32
@@ -48,7 +63,7 @@ func (s *semaphore) Acquire(ctx context.Context) error {
 				select {
 				case <-ctx.Done():
 					atomic.AddInt64(&s.waitCount, -1)
-					return errors.New("ctx.Done()")
+					return ErrCtxDone
 				// wait for broadcast
 				case <-broadcastCh:
 				}
@@ -67,7 +82,7 @@ func (s *semaphore) Release() {
 		state := atomic.LoadUint64(&s.state)
 		count := state & 0xFFFFFFFF
 		if count == 0 {
-			panic("Release without acquire")
+			panic("semaphore release without acquire")
 		}
 		newCount := count - 1
 		if atomic.CompareAndSwapUint64(&s.state, state, state&0xFFFFFFFF00000000+newCount) {
@@ -89,6 +104,9 @@ func (s *semaphore) Release() {
 }
 
 func (s *semaphore) SetLimit(limit int) {
+	if limit <= 0 {
+		panic("semaphore limit must be greater than 0")
+	}
 	for {
 		state := atomic.LoadUint64(&s.state)
 		if atomic.CompareAndSwapUint64(&s.state, state, uint64(limit)<<32+state&0xFFFFFFFF) {
@@ -101,7 +119,6 @@ func (s *semaphore) SetLimit(limit int) {
 			return
 		}
 	}
-	panic("unreachable")
 }
 
 func (s *semaphore) GetCount() int {
