@@ -5,21 +5,21 @@ import (
 	"sync"
 	"testing"
 
-	"golang.org/x/sync/semaphore"
+	"github.com/kamilsk/semaphore"
 )
 
-func BenchmarkXSyncSemaphore_Acquire_Release_under_limit_simple(b *testing.B) {
-	sem := semaphore.NewWeighted(int64(b.N))
+func BenchmarkKamilskSemaphore_Acquire_Release_under_limit_simple(b *testing.B) {
+	sem := semaphore.New(b.N)
 	ctx := context.Background()
 
 	for i := 0; i < b.N; i++ {
-		sem.Acquire(ctx, 1)
-		sem.Release(1)
+		rf, _ := sem.Acquire(ctx.Done())
+		rf.Release()
 	}
 }
 
-func BenchmarkXSyncSemaphore_Acquire_Release_under_limit(b *testing.B) {
-	sem := semaphore.NewWeighted(100)
+func BenchmarkKamilskSemaphore_Acquire_Release_under_limit(b *testing.B) {
+	sem := semaphore.New(100)
 	ctx := context.Background()
 
 	c := make(chan struct{})
@@ -29,8 +29,8 @@ func BenchmarkXSyncSemaphore_Acquire_Release_under_limit(b *testing.B) {
 		go func() {
 			<-c
 			for j := 0; j < b.N; j++ {
-				sem.Acquire(ctx, 1)
-				sem.Release(1)
+				rf, _ := sem.Acquire(ctx.Done())
+				rf.Release()
 			}
 			wg.Done()
 		}()
@@ -41,8 +41,8 @@ func BenchmarkXSyncSemaphore_Acquire_Release_under_limit(b *testing.B) {
 	wg.Wait()
 }
 
-func BenchmarkXSyncSemaphore_Acquire_Release_over_limit(b *testing.B) {
-	sem := semaphore.NewWeighted(10)
+func BenchmarkKamilskSemaphore_Acquire_Release_over_limit(b *testing.B) {
+	sem := semaphore.New(10)
 	ctx := context.Background()
 
 	c := make(chan struct{})
@@ -52,8 +52,8 @@ func BenchmarkXSyncSemaphore_Acquire_Release_over_limit(b *testing.B) {
 		go func() {
 			<-c
 			for j := 0; j < b.N; j++ {
-				sem.Acquire(ctx, 1)
-				sem.Release(1)
+				rf, _ := sem.Acquire(ctx.Done())
+				rf.Release()
 			}
 			wg.Done()
 		}()

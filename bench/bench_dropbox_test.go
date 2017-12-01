@@ -1,8 +1,8 @@
 package bench
 
 import (
-	"testing"
 	"sync"
+	"testing"
 
 	"github.com/dropbox/godropbox/sync2"
 )
