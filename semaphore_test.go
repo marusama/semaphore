@@ -57,7 +57,7 @@ func TestNew_negative_limit_panic_expected(t *testing.T) {
 func TestSemaphore_Acquire(t *testing.T) {
 	sem := New(1)
 
-	err := sem.Acquire(nil)
+	err := sem.Acquire(nil, 1)
 
 	if err != nil {
 		t.Error("Error returned:", err.Error())
@@ -65,10 +65,20 @@ func TestSemaphore_Acquire(t *testing.T) {
 	checkLimitAndCount(t, sem, 1, 1)
 }
 
+func TestSemaphore_Acquire_panic_expected(t *testing.T) {
+	defer func() {
+		if recover() == nil {
+			t.Error("Panic expected")
+		}
+	}()
+	sem := New(1)
+	sem.Acquire(nil, 0)
+}
+
 func TestSemaphore_Acquire_with_ctx(t *testing.T) {
 	sem := New(1)
 
-	err := sem.Acquire(context.Background())
+	err := sem.Acquire(context.Background(), 1)
 
 	if err != nil {
 		t.Error("Error returned:", err.Error())
@@ -81,7 +91,7 @@ func TestSemaphore_Acquire_ctx_done(t *testing.T) {
 	ctx_done, cancel := context.WithTimeout(context.Background(), 1*time.Hour)
 	cancel() // make ctx.Done()
 
-	err := sem.Acquire(ctx_done)
+	err := sem.Acquire(ctx_done, 1)
 
 	if err != ErrCtxDone {
 		t.Error("Error is not ErrCtxDone")
@@ -89,20 +99,82 @@ func TestSemaphore_Acquire_ctx_done(t *testing.T) {
 	checkLimitAndCount(t, sem, 1, 0)
 }
 
+func TestSemaphore_TryAcquire(t *testing.T) {
+	sem := New(1)
+
+	if !(sem.TryAcquire(2) == false) {
+		t.Fail()
+	}
+	checkLimitAndCount(t, sem, 1, 0)
+
+	if !(sem.TryAcquire(1) == true) {
+		t.Fail()
+	}
+	checkLimitAndCount(t, sem, 1, 1)
+
+	if !(sem.TryAcquire(1) == false) {
+		t.Fail()
+	}
+	checkLimitAndCount(t, sem, 1, 1)
+}
+
+func TestSemaphore_TryAcquire_panic_expected(t *testing.T) {
+	defer func() {
+		if recover() == nil {
+			t.Error("Panic expected")
+		}
+	}()
+	sem := New(1)
+	sem.TryAcquire(0)
+}
+
+func TestSemaphore_TryAcquire_contention(t *testing.T) {
+	sem := New(5)
+
+	c := make(chan struct{})
+	wg := sync.WaitGroup{}
+	for i := 0; i < 100; i++ {
+		wg.Add(1)
+		go func() {
+			<-c
+			if sem.TryAcquire(1) {
+				sem.Release(1)
+			}
+			wg.Done()
+		}()
+	}
+
+	close(c) // start
+	wg.Wait()
+
+	checkLimitAndCount(t, sem, 5, 0)
+}
+
 func TestSemaphore_Release(t *testing.T) {
 	sem := New(1)
 
-	sem.Acquire(nil)
-	sem.Release()
+	sem.Acquire(nil, 1)
+	sem.Release(1)
 
 	checkLimitAndCount(t, sem, 1, 0)
+}
+
+func TestSemaphore_Release_panic_expected(t *testing.T) {
+	defer func() {
+		if recover() == nil {
+			t.Error("Panic expected")
+		}
+	}()
+	sem := New(1)
+	sem.Acquire(nil, 1)
+	sem.Release(0)
 }
 
 func TestSemaphore_Release_with_ctx(t *testing.T) {
 	sem := New(1)
 
-	sem.Acquire(context.Background())
-	sem.Release()
+	sem.Acquire(context.Background(), 1)
+	sem.Release(1)
 
 	checkLimitAndCount(t, sem, 1, 0)
 }
@@ -115,23 +187,23 @@ func TestSemaphore_Release_without_Acquire(t *testing.T) {
 			t.Error("Panic expected")
 		}
 	}()
-	sem.Release()
+	sem.Release(1)
 }
 
 func TestSemaphore_Acquire_Release_2_times(t *testing.T) {
 	sem := New(2)
 	checkLimitAndCount(t, sem, 2, 0)
 
-	sem.Acquire(nil)
+	sem.Acquire(nil, 1)
 	checkLimitAndCount(t, sem, 2, 1)
 
-	sem.Acquire(nil)
+	sem.Acquire(nil, 1)
 	checkLimitAndCount(t, sem, 2, 2)
 
-	sem.Release()
+	sem.Release(1)
 	checkLimitAndCount(t, sem, 2, 1)
 
-	sem.Release()
+	sem.Release(1)
 	checkLimitAndCount(t, sem, 2, 0)
 }
 
@@ -144,11 +216,11 @@ func TestSemaphore_Acquire_Release_under_limit(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			<-c
-			err := sem.Acquire(nil)
+			err := sem.Acquire(nil, 1)
 			if err != nil {
 				panic(err)
 			}
-			sem.Release()
+			sem.Release(1)
 			wg.Done()
 		}()
 	}
@@ -170,14 +242,14 @@ func TestSemaphore_Acquire_Release_under_limit_ctx_done(t *testing.T) {
 		go func() {
 			<-c
 			for {
-				err := sem.Acquire(ctx)
+				err := sem.Acquire(ctx, 1)
 				if err != nil {
 					if err == ErrCtxDone {
 						break
 					}
 					panic(err)
 				}
-				sem.Release()
+				sem.Release(1)
 			}
 			wg.Done()
 		}()
@@ -199,11 +271,11 @@ func TestSemaphore_Acquire_Release_over_limit(t *testing.T) {
 		go func() {
 			<-c
 			for j := 0; j < 1000; j++ {
-				err := sem.Acquire(nil)
+				err := sem.Acquire(nil, 1)
 				if err != nil {
 					panic(err)
 				}
-				sem.Release()
+				sem.Release(1)
 			}
 			wg.Done()
 		}()
@@ -226,14 +298,14 @@ func TestSemaphore_Acquire_Release_over_limit_ctx_done(t *testing.T) {
 		go func() {
 			<-c
 			for {
-				err := sem.Acquire(ctx)
+				err := sem.Acquire(ctx, 1)
 				if err != nil {
 					if err == ErrCtxDone {
 						break
 					}
 					panic(err)
 				}
-				sem.Release()
+				sem.Release(1)
 			}
 			wg.Done()
 		}()
@@ -284,19 +356,19 @@ func TestSemaphore_SetLimit_increase_limit(t *testing.T) {
 	sem := New(1)
 	checkLimitAndCount(t, sem, 1, 0)
 
-	sem.Acquire(nil)
+	sem.Acquire(nil, 1)
 	checkLimitAndCount(t, sem, 1, 1)
 
 	sem.SetLimit(2)
 	checkLimitAndCount(t, sem, 2, 1)
 
-	sem.Acquire(nil)
+	sem.Acquire(nil, 1)
 	checkLimitAndCount(t, sem, 2, 2)
 
-	sem.Release()
+	sem.Release(1)
 	checkLimitAndCount(t, sem, 2, 1)
 
-	sem.Release()
+	sem.Release(1)
 	checkLimitAndCount(t, sem, 2, 0)
 }
 
@@ -304,19 +376,19 @@ func TestSemaphore_SetLimit_decrease_limit(t *testing.T) {
 	sem := New(2)
 	checkLimitAndCount(t, sem, 2, 0)
 
-	sem.Acquire(nil)
+	sem.Acquire(nil, 1)
 	checkLimitAndCount(t, sem, 2, 1)
 
-	sem.Acquire(nil)
+	sem.Acquire(nil, 1)
 	checkLimitAndCount(t, sem, 2, 2)
 
 	sem.SetLimit(1)
 	checkLimitAndCount(t, sem, 1, 2)
 
-	sem.Release()
+	sem.Release(1)
 	checkLimitAndCount(t, sem, 1, 1)
 
-	sem.Release()
+	sem.Release(1)
 	checkLimitAndCount(t, sem, 1, 0)
 }
 
@@ -331,7 +403,7 @@ func TestSemaphore_SetLimit_increase_broadcast(t *testing.T) {
 	}
 
 	sem := New(1)
-	sem.Acquire(nil)
+	sem.Acquire(nil, 1)
 
 	innerWGs := getWGs(2)
 	outerWGs := getWGs(2)
@@ -341,12 +413,12 @@ func TestSemaphore_SetLimit_increase_broadcast(t *testing.T) {
 
 		// here we a trying to acquire over limit
 		checkLimitAndCount(t, sem, 1, 1)
-		sem.Acquire(nil)
+		sem.Acquire(nil, 1)
 
 		innerWGs[0].Done()
 		outerWGs[1].Wait()
 
-		sem.Release()
+		sem.Release(1)
 
 		innerWGs[1].Done()
 	}()
@@ -369,7 +441,7 @@ func TestSemaphore_SetLimit_increase_broadcast(t *testing.T) {
 
 	checkLimitAndCount(t, sem, 2, 1)
 
-	sem.Release()
+	sem.Release(1)
 	checkLimitAndCount(t, sem, 2, 0)
 }
 
@@ -383,12 +455,12 @@ func TestSemaphore_Acquire_Release_SetLimit_under_limit(t *testing.T) {
 		go func() {
 			<-c
 			for j := 0; j < 10000; j++ {
-				err := sem.Acquire(nil)
+				err := sem.Acquire(nil, 1)
 				if err != nil {
 					panic(err)
 				}
 				runtime.Gosched()
-				sem.Release()
+				sem.Release(1)
 				runtime.Gosched()
 			}
 			wg.Done()
@@ -435,7 +507,7 @@ func TestSemaphore_Acquire_Release_SetLimit_under_limit_ctx_done(t *testing.T) {
 		go func() {
 			<-c
 			for {
-				err := sem.Acquire(ctx)
+				err := sem.Acquire(ctx, 1)
 				if err != nil {
 					if err == ErrCtxDone {
 						break
@@ -443,7 +515,7 @@ func TestSemaphore_Acquire_Release_SetLimit_under_limit_ctx_done(t *testing.T) {
 					panic(err)
 				}
 				runtime.Gosched()
-				sem.Release()
+				sem.Release(1)
 				runtime.Gosched()
 			}
 			wg.Done()
@@ -484,12 +556,12 @@ func TestSemaphore_Acquire_Release_SetLimit_over_limit(t *testing.T) {
 		go func() {
 			<-c
 			for j := 0; j < 10000; j++ {
-				err := sem.Acquire(nil)
+				err := sem.Acquire(nil, 1)
 				if err != nil {
 					panic(err)
 				}
 				runtime.Gosched()
-				sem.Release()
+				sem.Release(1)
 				runtime.Gosched()
 			}
 			wg.Done()
@@ -536,7 +608,7 @@ func TestSemaphore_Acquire_Release_SetLimit_over_limit_ctx_done(t *testing.T) {
 		go func() {
 			<-c
 			for {
-				err := sem.Acquire(ctx)
+				err := sem.Acquire(ctx, 1)
 				if err != nil {
 					if err == ErrCtxDone {
 						break
@@ -544,7 +616,7 @@ func TestSemaphore_Acquire_Release_SetLimit_over_limit_ctx_done(t *testing.T) {
 					panic(err)
 				}
 				runtime.Gosched()
-				sem.Release()
+				sem.Release(1)
 				runtime.Gosched()
 			}
 			wg.Done()
@@ -585,12 +657,12 @@ func TestSemaphore_Acquire_Release_SetLimit_random_limit(t *testing.T) {
 		go func() {
 			<-c
 			for j := 0; j < 10000; j++ {
-				err := sem.Acquire(nil)
+				err := sem.Acquire(nil, 1)
 				if err != nil {
 					panic(err)
 				}
 				runtime.Gosched()
-				sem.Release()
+				sem.Release(1)
 				runtime.Gosched()
 			}
 			wg.Done()
@@ -637,7 +709,7 @@ func TestSemaphore_Acquire_Release_SetLimit_random_limit_ctx_done(t *testing.T) 
 		go func() {
 			<-c
 			for {
-				err := sem.Acquire(ctx)
+				err := sem.Acquire(ctx, 1)
 				if err != nil {
 					if err == ErrCtxDone {
 						break
@@ -645,7 +717,7 @@ func TestSemaphore_Acquire_Release_SetLimit_random_limit_ctx_done(t *testing.T) 
 					panic(err)
 				}
 				runtime.Gosched()
-				sem.Release()
+				sem.Release(1)
 				runtime.Gosched()
 			}
 			wg.Done()
@@ -681,7 +753,7 @@ func BenchmarkSemaphore_Acquire(b *testing.B) {
 	ctx := context.Background()
 
 	for i := 0; i < b.N; i++ {
-		sem.Acquire(ctx)
+		sem.Acquire(ctx, 1)
 	}
 
 	if sem.GetCount() != sem.GetLimit() {
@@ -694,8 +766,8 @@ func BenchmarkSemaphore_Acquire_Release_under_limit_simple(b *testing.B) {
 	ctx := context.Background()
 
 	for i := 0; i < b.N; i++ {
-		sem.Acquire(ctx)
-		sem.Release()
+		sem.Acquire(ctx, 1)
+		sem.Release(1)
 	}
 
 	if sem.GetCount() != 0 {
@@ -713,8 +785,8 @@ func BenchmarkSemaphore_Acquire_Release_under_limit(b *testing.B) {
 		go func() {
 			<-c
 			for j := 0; j < b.N; j++ {
-				sem.Acquire(nil)
-				sem.Release()
+				sem.Acquire(nil, 1)
+				sem.Release(1)
 			}
 			wg.Done()
 		}()
@@ -739,8 +811,8 @@ func BenchmarkSemaphore_Acquire_Release_over_limit(b *testing.B) {
 		go func() {
 			<-c
 			for j := 0; j < b.N; j++ {
-				sem.Acquire(nil)
-				sem.Release()
+				sem.Acquire(nil, 1)
+				sem.Release(1)
 			}
 			wg.Done()
 		}()
