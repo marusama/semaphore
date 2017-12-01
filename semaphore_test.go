@@ -2,7 +2,6 @@ package semaphore
 
 import (
 	"context"
-	"fmt"
 	"math/rand"
 	"runtime"
 	"sync"
