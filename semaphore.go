@@ -8,8 +8,9 @@ import (
 )
 
 type Semaphore interface {
-	Acquire(ctx context.Context) error
-	Release()
+	Acquire(ctx context.Context, n int) error
+	TryAcquire(n int) bool
+	Release(n int)
 	SetLimit(limit int)
 	GetLimit() int
 	GetCount() int
@@ -36,7 +37,10 @@ func New(limit int) Semaphore {
 	}
 }
 
-func (s *semaphore) Acquire(ctx context.Context) error {
+func (s *semaphore) Acquire(ctx context.Context, n int) error {
+	if n <= 0 {
+		panic("n must be positive number")
+	}
 	for {
 		if ctx != nil {
 			select {
@@ -49,7 +53,7 @@ func (s *semaphore) Acquire(ctx context.Context) error {
 		state := atomic.LoadUint64(&s.state)
 		count := state & 0xFFFFFFFF
 		limit := state >> 32
-		newCount := count + 1
+		newCount := count + uint64(n)
 		if newCount <= limit {
 			if atomic.CompareAndSwapUint64(&s.state, state, limit<<32+newCount) {
 				return nil
@@ -78,7 +82,32 @@ func (s *semaphore) Acquire(ctx context.Context) error {
 	}
 }
 
-func (s *semaphore) Release() {
+func (s *semaphore) TryAcquire(n int) bool {
+	if n <= 0 {
+		panic("n must be positive number")
+	}
+
+	for {
+		state := atomic.LoadUint64(&s.state)
+		count := state & 0xFFFFFFFF
+		limit := state >> 32
+		newCount := count + uint64(n)
+		if newCount <= limit {
+			if atomic.CompareAndSwapUint64(&s.state, state, limit<<32+newCount) {
+				return true
+			} else {
+				continue
+			}
+		} else {
+			return false
+		}
+	}
+}
+
+func (s *semaphore) Release(n int) {
+	if n <= 0 {
+		panic("n must be positive number")
+	}
 	for {
 		state := atomic.LoadUint64(&s.state)
 		count := state & 0xFFFFFFFF
@@ -86,7 +115,7 @@ func (s *semaphore) Release() {
 		if count == 0 {
 			panic("semaphore release without acquire")
 		}
-		newCount := count - 1
+		newCount := count - uint64(n)
 		if atomic.CompareAndSwapUint64(&s.state, state, state&0xFFFFFFFF00000000+newCount) {
 			if count >= limit {
 				newBroadcastCh := make(chan struct{})
