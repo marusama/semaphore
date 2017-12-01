@@ -1,9 +1,9 @@
 package bench
 
 import (
-	"testing"
 	"context"
 	"sync"
+	"testing"
 
 	"github.com/marusama/semaphore"
 )
@@ -73,4 +73,3 @@ func BenchmarkSemaphore_Acquire_Release_over_limit(b *testing.B) {
 		b.Error("semaphore must have count = 0")
 	}
 }
-
