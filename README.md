@@ -1,7 +1,7 @@
 semaphore
 =========
 
-Fast golang semaphore based on CAS
+Fast resizable golang semaphore based on CAS
 
 * allows weighted acquire/release;
 * supports cancellation via context;
@@ -19,11 +19,9 @@ Acquire
 ```go
 sem.Acquire(ctx, n)     // acquire with context
 sem.TryAcquire(n)       // try acquire without blocking 
-```
-Acquire with timeout
-```go
+...
 ctx := context.WithTimeout(context.Background(), time.Second)
-sem.Acquire(ctx, n)
+sem.Acquire(ctx, n)     // acquire with timeout
 ``` 
 Release
 ```go
