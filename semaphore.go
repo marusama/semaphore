@@ -64,7 +64,7 @@ type semaphore struct {
 
 	// broadcast fields
 	lock        sync.RWMutex
-	broadcastCh *chan struct{}
+	broadcastCh chan struct{}
 }
 
 // New initializes a new instance of the Semaphore, specifying the maximum number of concurrent entries.
@@ -75,7 +75,7 @@ func New(limit int) Semaphore {
 	broadcastCh := make(chan struct{})
 	return &semaphore{
 		state:       uint64(limit) << 32,
-		broadcastCh: &broadcastCh,
+		broadcastCh: broadcastCh,
 	}
 }
 
@@ -111,7 +111,7 @@ func (s *semaphore) Acquire(ctx context.Context, n int) error {
 		} else {
 			// semaphore is full, let's wait
 			s.lock.RLock()
-			broadcastCh := *s.broadcastCh
+			broadcastCh := s.broadcastCh
 			s.lock.RUnlock()
 
 			if ctx != nil {
@@ -173,11 +173,11 @@ func (s *semaphore) Release(n int) int {
 				newBroadcastCh := make(chan struct{})
 				s.lock.Lock()
 				oldBroadcastCh := s.broadcastCh
-				s.broadcastCh = &newBroadcastCh
+				s.broadcastCh = newBroadcastCh
 				s.lock.Unlock()
 
 				// send broadcast signal
-				close(*oldBroadcastCh)
+				close(oldBroadcastCh)
 			}
 			return int(count)
 		}
@@ -194,11 +194,11 @@ func (s *semaphore) SetLimit(limit int) {
 			newBroadcastCh := make(chan struct{})
 			s.lock.Lock()
 			oldBroadcastCh := s.broadcastCh
-			s.broadcastCh = &newBroadcastCh
+			s.broadcastCh = newBroadcastCh
 			s.lock.Unlock()
 
 			// send broadcast signal
-			close(*oldBroadcastCh)
+			close(oldBroadcastCh)
 			return
 		}
 	}
