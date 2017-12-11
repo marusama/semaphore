@@ -22,15 +22,15 @@ sem := semaphore.New(5) // new semaphore with limit=5
 ```
 Acquire
 ```go
-sem.Acquire(ctx, n)     // acquire with context
-sem.TryAcquire(n)       // try acquire without blocking 
+sem.Acquire(ctx, n)     // acquire n with context
+sem.TryAcquire(n)       // try acquire n without blocking 
 ...
 ctx := context.WithTimeout(context.Background(), time.Second)
-sem.Acquire(ctx, n)     // acquire with timeout
+sem.Acquire(ctx, n)     // acquire n with timeout
 ``` 
 Release
 ```go
-sem.Release(n)          // release
+sem.Release(n)          // release n
 ```
 Change semaphore limit
 ```go
@@ -78,4 +78,4 @@ BenchmarkPivotalGolangSemaphore_Acquire_Release_under_limit-4             	  100
 BenchmarkPivotalGolangSemaphore_Acquire_Release_over_limit-4              	   10000	    128890 ns/op	   12800 B/op	     200 allocs/op
 
 ```
-You can rerun these benchmarks, just checkout `benchmarks` branch.
+You can rerun these benchmarks, just checkout `benchmarks` branch and do `go test -bench=. -benchmem ./bench/...`
