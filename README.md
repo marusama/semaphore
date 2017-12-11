@@ -1,5 +1,10 @@
 semaphore
 =========
+[![Build Status](https://travis-ci.org/marusama/semaphore.svg?branch=master)](https://travis-ci.org/marusama/semaphore)
+[![Go Report Card](https://goreportcard.com/badge/github.com/marusama/semaphore)](https://goreportcard.com/report/github.com/marusama/semaphore)
+[![Coverage Status](https://coveralls.io/repos/github/marusama/semaphore/badge.svg?branch=master)](https://coveralls.io/github/marusama/semaphore?branch=master)
+[![GoDoc](https://godoc.org/github.com/kamilsk/semaphore?status.svg)](https://godoc.org/github.com/marusama/semaphore)
+[![License](https://img.shields.io/github/license/mashape/apistatus.svg?maxAge=2592000)](LICENSE)
 
 Fast resizable golang semaphore based on CAS
 

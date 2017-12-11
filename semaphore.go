@@ -67,7 +67,7 @@ type semaphore struct {
 	broadcastCh *chan struct{}
 }
 
-// Initializes a new instance of the Semaphore, specifying the maximum number of concurrent entries.
+// New initializes a new instance of the Semaphore, specifying the maximum number of concurrent entries.
 func New(limit int) Semaphore {
 	if limit <= 0 {
 		panic("semaphore limit must be greater than 0")
@@ -101,16 +101,15 @@ func (s *semaphore) Acquire(ctx context.Context, n int) error {
 		newCount := count + uint64(n)
 
 		if newCount <= limit {
-			// try CAS
 			if atomic.CompareAndSwapUint64(&s.state, state, limit<<32+newCount) {
-				// success CAS
+				// acquired
 				return nil
-			} else {
-				// try again
-				continue
 			}
+
+			// CAS failed, try again
+			continue
 		} else {
-			// semaphore is full
+			// semaphore is full, let's wait
 			s.lock.RLock()
 			broadcastCh := *s.broadcastCh
 			s.lock.RUnlock()
@@ -145,12 +144,13 @@ func (s *semaphore) TryAcquire(n int) bool {
 		if newCount <= limit {
 			if atomic.CompareAndSwapUint64(&s.state, state, limit<<32+newCount) {
 				return true
-			} else {
-				continue
 			}
-		} else {
-			return false
+
+			// CAS failed, try again
+			continue
 		}
+
+		return false
 	}
 }
 

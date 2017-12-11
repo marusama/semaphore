@@ -87,10 +87,10 @@ func TestSemaphore_Acquire_with_ctx(t *testing.T) {
 
 func TestSemaphore_Acquire_ctx_done(t *testing.T) {
 	sem := New(1)
-	ctx_done, cancel := context.WithTimeout(context.Background(), 1*time.Hour)
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Hour)
 	cancel() // make ctx.Done()
 
-	err := sem.Acquire(ctx_done, 1)
+	err := sem.Acquire(ctx, 1)
 
 	if err != ErrCtxDone {
 		t.Error("Error is not ErrCtxDone")
