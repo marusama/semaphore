@@ -62,13 +62,15 @@ func TestSemaphore_Acquire(t *testing.T) {
 	checkLimitAndCount(t, sem, 1, 1)
 }
 
-func TestSemaphore_Acquire_panic_expected(t *testing.T) {
+func TestSemaphore_Acquire_zero_panic_expected(t *testing.T) {
 	defer func() {
 		if recover() == nil {
 			t.Error("Panic expected")
 		}
 	}()
 	sem := New(1)
+
+	// acquire zero should panic
 	sem.Acquire(nil, 0)
 }
 
@@ -151,12 +153,15 @@ func TestSemaphore_Release(t *testing.T) {
 	sem := New(1)
 
 	sem.Acquire(nil, 1)
-	sem.Release(1)
+	oldCnt := sem.Release(1)
 
+	if oldCnt != 1 {
+		t.Error("semaphore must have old count = ", 1, ", but has ", oldCnt)
+	}
 	checkLimitAndCount(t, sem, 1, 0)
 }
 
-func TestSemaphore_Release_panic_expected(t *testing.T) {
+func TestSemaphore_Release_zero_panic_expected(t *testing.T) {
 	defer func() {
 		if recover() == nil {
 			t.Error("Panic expected")
@@ -171,12 +176,15 @@ func TestSemaphore_Release_with_ctx(t *testing.T) {
 	sem := New(1)
 
 	sem.Acquire(context.Background(), 1)
-	sem.Release(1)
+	oldCnt := sem.Release(1)
 
+	if oldCnt != 1 {
+		t.Error("semaphore must have old count = ", 1, ", but has ", oldCnt)
+	}
 	checkLimitAndCount(t, sem, 1, 0)
 }
 
-func TestSemaphore_Release_without_Acquire(t *testing.T) {
+func TestSemaphore_Release_without_Acquire_panic_expected(t *testing.T) {
 	sem := New(1)
 
 	defer func() {
@@ -187,7 +195,7 @@ func TestSemaphore_Release_without_Acquire(t *testing.T) {
 	sem.Release(1)
 }
 
-func TestSemaphore_Acquire_Release_2_times(t *testing.T) {
+func TestSemaphore_Acquire_2_times_Release_2_times(t *testing.T) {
 	sem := New(2)
 	checkLimitAndCount(t, sem, 2, 0)
 
@@ -197,10 +205,16 @@ func TestSemaphore_Acquire_Release_2_times(t *testing.T) {
 	sem.Acquire(nil, 1)
 	checkLimitAndCount(t, sem, 2, 2)
 
-	sem.Release(1)
+	oldCnt := sem.Release(1)
+	if oldCnt != 2 {
+		t.Error("semaphore must have old count = ", 2, ", but has ", oldCnt)
+	}
 	checkLimitAndCount(t, sem, 2, 1)
 
-	sem.Release(1)
+	oldCnt = sem.Release(1)
+	if oldCnt != 1 {
+		t.Error("semaphore must have old count = ", 1, ", but has ", oldCnt)
+	}
 	checkLimitAndCount(t, sem, 2, 0)
 }
 
