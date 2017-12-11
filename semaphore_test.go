@@ -153,8 +153,11 @@ func TestSemaphore_Release(t *testing.T) {
 	sem := New(1)
 
 	sem.Acquire(nil, 1)
-	sem.Release(1)
+	oldCnt := sem.Release(1)
 
+	if oldCnt != 1 {
+		t.Error("semaphore must have old count = ", 1, ", but has ", oldCnt)
+	}
 	checkLimitAndCount(t, sem, 1, 0)
 }
 
@@ -173,8 +176,11 @@ func TestSemaphore_Release_with_ctx(t *testing.T) {
 	sem := New(1)
 
 	sem.Acquire(context.Background(), 1)
-	sem.Release(1)
+	oldCnt := sem.Release(1)
 
+	if oldCnt != 1 {
+		t.Error("semaphore must have old count = ", 1, ", but has ", oldCnt)
+	}
 	checkLimitAndCount(t, sem, 1, 0)
 }
 
@@ -199,10 +205,16 @@ func TestSemaphore_Acquire_2_times_Release_2_times(t *testing.T) {
 	sem.Acquire(nil, 1)
 	checkLimitAndCount(t, sem, 2, 2)
 
-	sem.Release(1)
+	oldCnt := sem.Release(1)
+	if oldCnt != 2 {
+		t.Error("semaphore must have old count = ", 2, ", but has ", oldCnt)
+	}
 	checkLimitAndCount(t, sem, 2, 1)
 
-	sem.Release(1)
+	oldCnt = sem.Release(1)
+	if oldCnt != 1 {
+		t.Error("semaphore must have old count = ", 1, ", but has ", oldCnt)
+	}
 	checkLimitAndCount(t, sem, 2, 0)
 }
 
