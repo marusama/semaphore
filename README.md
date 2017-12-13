@@ -78,4 +78,4 @@ BenchmarkPivotalGolangSemaphore_Acquire_Release_under_limit-4             	  100
 BenchmarkPivotalGolangSemaphore_Acquire_Release_over_limit-4              	   10000	    128890 ns/op	   12800 B/op	     200 allocs/op
 
 ```
-You can rerun these benchmarks, just checkout `benchmarks` branch and do `go test -bench=. -benchmem ./bench/...`
+You can rerun these benchmarks, just checkout `benchmarks` branch and run `go test -bench=. -benchmem ./bench/...`
