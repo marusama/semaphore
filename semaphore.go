@@ -137,12 +137,17 @@ func (s *semaphore) TryAcquire(n int) bool {
 	}
 
 	for {
+		// get current semaphore count and limit
 		state := atomic.LoadUint64(&s.state)
 		count := state & 0xFFFFFFFF
 		limit := state >> 32
+
+		// new count
 		newCount := count + uint64(n)
+
 		if newCount <= limit {
 			if atomic.CompareAndSwapUint64(&s.state, state, limit<<32+newCount) {
+				// acquired
 				return true
 			}
 
@@ -150,6 +155,7 @@ func (s *semaphore) TryAcquire(n int) bool {
 			continue
 		}
 
+		// semaphore is full
 		return false
 	}
 }
@@ -159,13 +165,18 @@ func (s *semaphore) Release(n int) int {
 		panic("n must be positive number")
 	}
 	for {
+		// get current semaphore count and limit
 		state := atomic.LoadUint64(&s.state)
 		count := state & 0xFFFFFFFF
 		limit := state >> 32
-		if count == 0 {
+
+		if count < uint64(n) {
 			panic("semaphore release without acquire")
 		}
+
+		// new count
 		newCount := count - uint64(n)
+
 		if atomic.CompareAndSwapUint64(&s.state, state, state&0xFFFFFFFF00000000+newCount) {
 
 			// notifying possible waiters only if there weren't free slots before
@@ -179,6 +190,7 @@ func (s *semaphore) Release(n int) int {
 				// send broadcast signal
 				close(oldBroadcastCh)
 			}
+
 			return int(count)
 		}
 	}

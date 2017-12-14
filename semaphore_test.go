@@ -198,6 +198,18 @@ func TestSemaphore_Release_without_Acquire_panic_expected(t *testing.T) {
 	sem.Release(1)
 }
 
+func TestSemaphore_Release_more_than_Acquired_panic_expected(t *testing.T) {
+	sem := New(1)
+
+	defer func() {
+		if recover() == nil {
+			t.Error("Panic expected")
+		}
+	}()
+	sem.Acquire(context.Background(), 1)
+	sem.Release(2)
+}
+
 func TestSemaphore_Acquire_2_times_Release_2_times(t *testing.T) {
 	sem := New(2)
 	checkLimitAndCount(t, sem, 2, 0)
