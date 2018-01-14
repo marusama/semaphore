@@ -1,5 +1,6 @@
 semaphore
 =========
+[![Awesome](https://cdn.rawgit.com/sindresorhus/awesome/d7305f38d29fed78fa85652e3a63e154dd8e8829/media/badge.svg)](https://github.com/avelino/awesome-go#goroutines)
 [![Build Status](https://travis-ci.org/marusama/semaphore.svg?branch=master)](https://travis-ci.org/marusama/semaphore)
 [![Go Report Card](https://goreportcard.com/badge/github.com/marusama/semaphore)](https://goreportcard.com/report/github.com/marusama/semaphore)
 [![Coverage Status](https://coveralls.io/repos/github/marusama/semaphore/badge.svg?branch=master)](https://coveralls.io/github/marusama/semaphore?branch=master)
