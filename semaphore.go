@@ -9,7 +9,6 @@ package semaphore // import "github.com/marusama/semaphore"
 
 import (
 	"context"
-	"errors"
 	"sync"
 	"sync/atomic"
 )
@@ -24,7 +23,7 @@ import (
 type Semaphore interface {
 	// Acquire enters the semaphore a specified number of times, blocking only until ctx is done.
 	// This operation can be cancelled via passed context (but it's allowed to pass ctx='nil').
-	// Method can return error 'ErrCtxDone' if the passed context is cancelled,
+	// Method returns context error (ctx.Err()) if the passed context is cancelled,
 	// but this behavior is not guaranteed and sometimes semaphore will still be acquired.
 	Acquire(ctx context.Context, n int) error
 
@@ -45,11 +44,6 @@ type Semaphore interface {
 	// GetCount returns current number of occupied entries in semaphore.
 	GetCount() int
 }
-
-var (
-	// ErrCtxDone predefined error - context is cancelled.
-	ErrCtxDone = errors.New("ctx.Done()")
-)
 
 // semaphore impl Semaphore intf
 type semaphore struct {
@@ -87,7 +81,7 @@ func (s *semaphore) Acquire(ctx context.Context, n int) error {
 		if ctx != nil {
 			select {
 			case <-ctx.Done():
-				return ErrCtxDone
+				return ctx.Err()
 			default:
 			}
 		}
@@ -117,7 +111,7 @@ func (s *semaphore) Acquire(ctx context.Context, n int) error {
 			if ctx != nil {
 				select {
 				case <-ctx.Done():
-					return ErrCtxDone
+					return ctx.Err()
 				// waiting for broadcast signal
 				case <-broadcastCh:
 				}

@@ -92,8 +92,8 @@ func TestSemaphore_Acquire_ctx_done(t *testing.T) {
 
 	err := sem.Acquire(ctx, 1)
 
-	if err != ErrCtxDone {
-		t.Error("Error is not ErrCtxDone")
+	if err != context.Canceled {
+		t.Error("Error is not context.Canceled")
 	}
 	checkLimitAndCount(t, sem, 1, 0)
 }
@@ -271,7 +271,7 @@ func TestSemaphore_Acquire_Release_under_limit_ctx_done(t *testing.T) {
 			for {
 				err := sem.Acquire(ctx, 1)
 				if err != nil {
-					if err == ErrCtxDone {
+					if err == context.DeadlineExceeded {
 						break
 					}
 					panic(err)
@@ -328,7 +328,7 @@ func TestSemaphore_Acquire_Release_over_limit_ctx_done(t *testing.T) {
 			for {
 				err := sem.Acquire(ctx, 1)
 				if err != nil {
-					if err == ErrCtxDone {
+					if err == context.DeadlineExceeded {
 						break
 					}
 					panic(err)
@@ -538,7 +538,7 @@ func TestSemaphore_Acquire_Release_SetLimit_under_limit_ctx_done(t *testing.T) {
 			for {
 				err := sem.Acquire(ctx, 1)
 				if err != nil {
-					if err == ErrCtxDone {
+					if err == context.DeadlineExceeded {
 						break
 					}
 					panic(err)
@@ -640,7 +640,7 @@ func TestSemaphore_Acquire_Release_SetLimit_over_limit_ctx_done(t *testing.T) {
 			for {
 				err := sem.Acquire(ctx, 1)
 				if err != nil {
-					if err == ErrCtxDone {
+					if err == context.DeadlineExceeded {
 						break
 					}
 					panic(err)
@@ -742,7 +742,7 @@ func TestSemaphore_Acquire_Release_SetLimit_random_limit_ctx_done(t *testing.T) 
 			for {
 				err := sem.Acquire(ctx, 1)
 				if err != nil {
-					if err == ErrCtxDone {
+					if err == context.DeadlineExceeded {
 						break
 					}
 					panic(err)
