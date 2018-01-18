@@ -29,26 +29,31 @@ func checkLimitAndCount(t *testing.T, sem Semaphore, expectedLimit, expectedCoun
 }
 
 func TestNew(t *testing.T) {
-	sem := New(1)
-	checkLimitAndCount(t, sem, 1, 0)
-}
-
-func TestNew_zero_limit_panic_expected(t *testing.T) {
-	defer func() {
-		if recover() == nil {
-			t.Error("Panic expected")
-		}
-	}()
-	_ = New(0)
-}
-
-func TestNew_negative_limit_panic_expected(t *testing.T) {
-	defer func() {
-		if recover() == nil {
-			t.Error("Panic expected")
-		}
-	}()
-	_ = New(-1)
+	tests := []func(){
+		func() {
+			sem := New(1)
+			checkLimitAndCount(t, sem, 1, 0)
+		},
+		func() {
+			defer func() {
+				if recover() == nil {
+					t.Error("Panic expected")
+				}
+			}()
+			_ = New(0)
+		},
+		func() {
+			defer func() {
+				if recover() == nil {
+					t.Error("Panic expected")
+				}
+			}()
+			_ = New(-1)
+		},
+	}
+	for _, test := range tests {
+		test()
+	}
 }
 
 func TestSemaphore_Acquire(t *testing.T) {
