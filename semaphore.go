@@ -111,6 +111,12 @@ func (s *semaphore) Acquire(ctx context.Context, n int) error {
 			broadcastCh := s.broadcastCh
 			s.lock.RUnlock()
 
+			// ensure that the state is the same as when we first checked; this
+			// ensures that the broadcastCh will eventually be closed by a Release.
+			if atomic.LoadUint64(&s.state) != state {
+				continue
+			}
+
 			select {
 			// check if context is done
 			case <-ctxDoneCh:

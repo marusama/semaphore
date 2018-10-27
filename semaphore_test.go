@@ -783,3 +783,43 @@ func TestSemaphore_Acquire_Release_SetLimit_random_limit_ctx_done(t *testing.T) 
 
 	checkLimitAndCount(t, sem, 1, 0)
 }
+
+func TestSemaphore_broadcast_channel_race(t *testing.T) {
+	threads := 4
+	acquiresPerRun := 5
+
+	// runTest method creates a short-lived semaphore with contention over only
+	// a few attempts per thread. The condition being tested is a regression
+	// in which the last thread to call acquire in the group will hang forever.
+	runTest := func(done chan struct{}) {
+		sem := New(1)
+		wg := sync.WaitGroup{}
+		for i := 0; i < threads; i++ {
+			wg.Add(1)
+			go func() {
+				for j := 0; j < acquiresPerRun; j++ {
+					runtime.Gosched()
+					if err := sem.Acquire(context.Background(), 1); err != nil {
+						t.Fatal(err)
+					}
+					sem.Release(1)
+				}
+				wg.Done()
+			}()
+		}
+		wg.Wait()
+		close(done)
+	}
+
+	// Run several iterations of the runTest method, which hopefully will result
+	// in one the iterations hanging.
+	for run := 0; run < 1000; run++ {
+		done := make(chan struct{})
+		go runTest(done)
+		select {
+		case <-done:
+		case <-time.After(10 * time.Second):
+			t.Fatalf("single run took more than ten seconds to finish")
+		}
+	}
+}
