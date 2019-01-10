@@ -40,43 +40,43 @@ sem.SetLimit(new_limit) // set new semaphore limit
 
 
 ### Some benchmarks
-Run on MacBook Pro (early 2015) with 2,7GHz Core i5 cpu and 16GB DDR3 ram:
+Run on MacBook Pro (2017) with 3,1GHz Core i5 cpu and 8GB DDR3 ram, macOS High Sierra, go version go1.11.4 darwin/amd64:
 ```text
 // this semaphore:
-BenchmarkSemaphore_Acquire_Release_under_limit_simple-4                   	50000000	        31.1 ns/op	       0 B/op	       0 allocs/op
-BenchmarkSemaphore_Acquire_Release_under_limit-4                          	 1000000	      1383 ns/op	       0 B/op	       0 allocs/op
-BenchmarkSemaphore_Acquire_Release_over_limit-4                           	  100000	     13468 ns/op	      24 B/op	       0 allocs/op
+BenchmarkSemaphore_Acquire_Release_under_limit_simple-4                   	20000000	        98.6 ns/op	      96 B/op	       1 allocs/op
+BenchmarkSemaphore_Acquire_Release_under_limit-4                          	 1000000	      1593 ns/op	     960 B/op	      10 allocs/op
+BenchmarkSemaphore_Acquire_Release_over_limit-4                           	  100000	     20760 ns/op	    9600 B/op	     100 allocs/op
 
 
 // some other implementations:
 
 // golang.org/x/sync/semaphore:
-BenchmarkXSyncSemaphore_Acquire_Release_under_limit_simple-4              	30000000	        51.8 ns/op	       0 B/op	       0 allocs/op
-BenchmarkXSyncSemaphore_Acquire_Release_under_limit-4                     	  500000	      2655 ns/op	       0 B/op	       0 allocs/op
-BenchmarkXSyncSemaphore_Acquire_Release_over_limit-4                      	   20000	    100004 ns/op	   15991 B/op	     299 allocs/op
+BenchmarkXSyncSemaphore_Acquire_Release_under_limit_simple-4              	50000000	        34.9 ns/op	       0 B/op	       0 allocs/op
+BenchmarkXSyncSemaphore_Acquire_Release_under_limit-4                     	 1000000	      1103 ns/op	       0 B/op	       0 allocs/op
+BenchmarkXSyncSemaphore_Acquire_Release_over_limit-4                      	   30000	     65927 ns/op	   15985 B/op	     299 allocs/op
 
 // github.com/abiosoft/semaphore:
-BenchmarkAbiosoftSemaphore_Acquire_Release_under_limit_simple-4           	 5000000	       269 ns/op	       0 B/op	       0 allocs/op
-BenchmarkAbiosoftSemaphore_Acquire_Release_under_limit-4                  	  300000	      5602 ns/op	       0 B/op	       0 allocs/op
-BenchmarkAbiosoftSemaphore_Acquire_Release_over_limit-4                   	   30000	     54090 ns/op	       0 B/op	       0 allocs/op
+BenchmarkAbiosoftSemaphore_Acquire_Release_under_limit_simple-4           	10000000	       208 ns/op	       0 B/op	       0 allocs/op
+BenchmarkAbiosoftSemaphore_Acquire_Release_under_limit-4                  	  500000	      3147 ns/op	       0 B/op	       0 allocs/op
+BenchmarkAbiosoftSemaphore_Acquire_Release_over_limit-4                   	   50000	     37148 ns/op	       0 B/op	       0 allocs/op
 
 // github.com/dropbox/godropbox
-BenchmarkDropboxBoundedSemaphore_Acquire_Release_under_limit_simple-4     	20000000	        99.6 ns/op	       0 B/op	       0 allocs/op
-BenchmarkDropboxBoundedSemaphore_Acquire_Release_under_limit-4            	 1000000	      1343 ns/op	       0 B/op	       0 allocs/op
-BenchmarkDropboxBoundedSemaphore_Acquire_Release_over_limit-4             	  100000	     35735 ns/op	       0 B/op	       0 allocs/op
-BenchmarkDropboxUnboundedSemaphore_Acquire_Release_under_limit_simple-4   	30000000	        56.0 ns/op	       0 B/op	       0 allocs/op
-BenchmarkDropboxUnboundedSemaphore_Acquire_Release_under_limit-4          	  500000	      2871 ns/op	       0 B/op	       0 allocs/op
-BenchmarkDropboxUnboundedSemaphore_Acquire_Release_over_limit-4           	   30000	     41089 ns/op	       0 B/op	       0 allocs/op
+BenchmarkDropboxBoundedSemaphore_Acquire_Release_under_limit_simple-4     	20000000	        75.9 ns/op	       0 B/op	       0 allocs/op
+BenchmarkDropboxBoundedSemaphore_Acquire_Release_under_limit-4            	 2000000	       629 ns/op	       0 B/op	       0 allocs/op
+BenchmarkDropboxBoundedSemaphore_Acquire_Release_over_limit-4             	  200000	     27308 ns/op	       0 B/op	       0 allocs/op
+BenchmarkDropboxUnboundedSemaphore_Acquire_Release_under_limit_simple-4   	50000000	        39.7 ns/op	       0 B/op	       0 allocs/op
+BenchmarkDropboxUnboundedSemaphore_Acquire_Release_under_limit-4          	 1000000	      1170 ns/op	       0 B/op	       0 allocs/op
+BenchmarkDropboxUnboundedSemaphore_Acquire_Release_over_limit-4           	  100000	     21013 ns/op	       0 B/op	       0 allocs/op
 
 // github.com/kamilsk/semaphore
-BenchmarkKamilskSemaphore_Acquire_Release_under_limit_simple-4            	10000000	       170 ns/op	      16 B/op	       1 allocs/op
-BenchmarkKamilskSemaphore_Acquire_Release_under_limit-4                   	  500000	      3023 ns/op	     160 B/op	      10 allocs/op
-BenchmarkKamilskSemaphore_Acquire_Release_over_limit-4                    	   20000	     67687 ns/op	    1600 B/op	     100 allocs/op
+BenchmarkKamilskSemaphore_Acquire_Release_under_limit_simple-4            	20000000	       110 ns/op	      16 B/op	       1 allocs/op
+BenchmarkKamilskSemaphore_Acquire_Release_under_limit-4                   	 1000000	      1520 ns/op	     160 B/op	      10 allocs/op
+BenchmarkKamilskSemaphore_Acquire_Release_over_limit-4                    	   50000	     42693 ns/op	    1600 B/op	     100 allocs/op
 
 // github.com/pivotal-golang/semaphore
-BenchmarkPivotalGolangSemaphore_Acquire_Release_under_limit_simple-4      	 1000000	      1006 ns/op	     136 B/op	       2 allocs/op
-BenchmarkPivotalGolangSemaphore_Acquire_Release_under_limit-4             	  100000	     11837 ns/op	    1280 B/op	      20 allocs/op
-BenchmarkPivotalGolangSemaphore_Acquire_Release_over_limit-4              	   10000	    128890 ns/op	   12800 B/op	     200 allocs/op
+BenchmarkPivotalGolangSemaphore_Acquire_Release_under_limit_simple-4      	 3000000	       558 ns/op	     136 B/op	       2 allocs/op
+BenchmarkPivotalGolangSemaphore_Acquire_Release_under_limit-4             	  200000	      9530 ns/op	    1280 B/op	      20 allocs/op
+BenchmarkPivotalGolangSemaphore_Acquire_Release_over_limit-4              	   10000	    111264 ns/op	   12801 B/op	     200 allocs/op
 
 ```
 You can rerun these benchmarks, just checkout `benchmarks` branch and run `go test -bench=. -benchmem ./bench/...`
