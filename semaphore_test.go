@@ -823,3 +823,40 @@ func TestSemaphore_broadcast_channel_race(t *testing.T) {
 		}
 	}
 }
+
+func TestSemaphore_weighted_acquire_gt_release(t *testing.T) {
+	runTest := func(done chan struct{}) {
+		weight := 1
+		biggerWeight := weight * 10
+		limit := weight * 100
+		releaseSignalChan := make(chan struct{})
+		semp := New(limit)
+
+		for i := 0; i < limit; i++ {
+			_ = semp.Acquire(context.TODO(), weight)
+			go func() {
+				<-releaseSignalChan
+				semp.Release(weight)
+			}()
+		}
+
+		// broadcast to release
+		go close(releaseSignalChan)
+
+		// Try to acquire while releasing
+		_ = semp.Acquire(context.TODO(), biggerWeight)
+		close(done)
+	}
+
+	// Run several iterations of the runTest method, which hopefully will result
+	// in one the iterations hanging.
+	for run := 0; run < 100000; run++ {
+		done := make(chan struct{})
+		go runTest(done)
+		select {
+		case <-done:
+		case <-time.After(10 * time.Second):
+			t.Fatalf("single run took more than ten seconds to finish")
+		}
+	}
+}
