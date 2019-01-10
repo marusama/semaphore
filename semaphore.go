@@ -175,7 +175,6 @@ func (s *semaphore) Release(n int) int {
 
 		if atomic.CompareAndSwapUint64(&s.state, state, state&0xFFFFFFFF00000000+newCount) {
 
-			// notifying possible waiters only if there weren't free slots before
 			newBroadcastCh := make(chan struct{})
 			s.lock.Lock()
 			oldBroadcastCh := s.broadcastCh
