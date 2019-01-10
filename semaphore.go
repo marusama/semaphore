@@ -165,7 +165,6 @@ func (s *semaphore) Release(n int) int {
 		// get current semaphore count and limit
 		state := atomic.LoadUint64(&s.state)
 		count := state & 0xFFFFFFFF
-		limit := state >> 32
 
 		if count < uint64(n) {
 			panic("semaphore release without acquire")
@@ -177,16 +176,13 @@ func (s *semaphore) Release(n int) int {
 		if atomic.CompareAndSwapUint64(&s.state, state, state&0xFFFFFFFF00000000+newCount) {
 
 			// notifying possible waiters only if there weren't free slots before
-			if count >= limit {
-				newBroadcastCh := make(chan struct{})
-				s.lock.Lock()
-				oldBroadcastCh := s.broadcastCh
-				s.broadcastCh = newBroadcastCh
-				s.lock.Unlock()
-
-				// send broadcast signal
-				close(oldBroadcastCh)
-			}
+			newBroadcastCh := make(chan struct{})
+			s.lock.Lock()
+			oldBroadcastCh := s.broadcastCh
+			s.broadcastCh = newBroadcastCh
+			s.lock.Unlock()
+			// send broadcast signal
+			close(oldBroadcastCh)
 
 			return int(count)
 		}
