@@ -17,7 +17,7 @@ Fast resizable golang semaphore based on CAS
 ### Usage
 Initiate
 ```go
-import "github.com/marusama/semaphore"
+import "github.com/marusama/semaphore/v2"
 ...
 sem := semaphore.New(5) // new semaphore with limit = 5
 ```

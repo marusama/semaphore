@@ -5,7 +5,7 @@
 // Package semaphore provides an implementation of counting semaphore primitive with possibility to change limit
 // after creation. This implementation is based on Compare-and-Swap primitive that in general case works faster
 // than other golang channel-based semaphore implementations.
-package semaphore // import "github.com/marusama/semaphore"
+package semaphore // import "github.com/marusama/semaphore/v2"
 
 import (
 	"context"
