@@ -5,7 +5,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/marusama/semaphore"
+	"github.com/marusama/semaphore/v2"
 )
 
 func BenchmarkSemaphore_Acquire_Release_under_limit_simple(b *testing.B) {
