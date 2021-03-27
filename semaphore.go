@@ -63,8 +63,8 @@ type semaphore struct {
 
 // New initializes a new instance of the Semaphore, specifying the maximum number of concurrent entries.
 func New(limit int) Semaphore {
-	if limit <= 0 {
-		panic("semaphore limit must be greater than 0")
+	if limit < 0 {
+		panic("semaphore limit must not be negative")
 	}
 	broadcastCh := make(chan struct{})
 	return &semaphore{
@@ -189,8 +189,8 @@ func (s *semaphore) Release(n int) int {
 }
 
 func (s *semaphore) SetLimit(limit int) {
-	if limit <= 0 {
-		panic("semaphore limit must be greater than 0")
+	if limit < 0 {
+		panic("semaphore limit must not be negative")
 	}
 	for {
 		state := atomic.LoadUint64(&s.state)
