@@ -35,12 +35,8 @@ func TestNew(t *testing.T) {
 			checkLimitAndCount(t, sem, 1, 0)
 		},
 		func() {
-			defer func() {
-				if recover() == nil {
-					t.Error("Panic expected")
-				}
-			}()
-			_ = New(0)
+			sem := New(0)
+			checkLimitAndCount(t, sem, 0, 0)
 		},
 		func() {
 			defer func() {
@@ -359,18 +355,9 @@ func TestSemaphore_SetLimit(t *testing.T) {
 
 	sem.SetLimit(1)
 	checkLimitAndCount(t, sem, 1, 0)
-}
 
-func TestSemaphore_SetLimit_zero_limit_panic_expected(t *testing.T) {
-	sem := New(1)
-	checkLimitAndCount(t, sem, 1, 0)
-
-	defer func() {
-		if recover() == nil {
-			t.Error("Panic expected")
-		}
-	}()
 	sem.SetLimit(0)
+	checkLimitAndCount(t, sem, 0, 0)
 }
 
 func TestSemaphore_SetLimit_negative_limit_panic_expected(t *testing.T) {
