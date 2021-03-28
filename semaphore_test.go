@@ -412,6 +412,26 @@ func TestSemaphore_SetLimit_decrease_limit(t *testing.T) {
 	checkLimitAndCount(t, sem, 1, 0)
 }
 
+func TestSemaphore_New0_SetLimit1_Acquire_Release_SetLimit0(t *testing.T) {
+	sem := New(0)
+	checkLimitAndCount(t, sem, 0, 0)
+
+	sem.SetLimit(1)
+	checkLimitAndCount(t, sem, 1, 0)
+
+	sem.Acquire(nil, 1)
+	checkLimitAndCount(t, sem, 1, 1)
+
+	oldCnt := sem.Release(1)
+	if oldCnt != 1 {
+		t.Error("semaphore must have old count = ", 1, ", but has ", oldCnt)
+	}
+	checkLimitAndCount(t, sem, 1, 0)
+
+	sem.SetLimit(0)
+	checkLimitAndCount(t, sem, 0, 0)
+}
+
 func TestSemaphore_SetLimit_increase_broadcast(t *testing.T) {
 	getWGs := func(cnt int) []*sync.WaitGroup {
 		wgs := make([]*sync.WaitGroup, cnt)
